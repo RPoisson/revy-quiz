@@ -79,7 +79,7 @@ export const QUESTIONS: Question[] = [
       return {
         id,
         label: `Space ${index}`, // satisfies Option.label and is useful for accessibility
-        imageUrl: `/quiz/q1/${id}.png`,
+        imageUrl: `/quiz/q1/${id}.jpg`,
       };
     }),
 },
@@ -103,17 +103,17 @@ export const QUESTIONS: Question[] = [
       {
         id: "home_01",
         label: "Refined & Elegant",
-        imageUrl: "/quiz/q2/home_01.png",
+        imageUrl: "/quiz/q2/home_01.jpg",
       },
       {
         id: "home_02",
         label: "Cozy & Lived-in",
-        imageUrl: "/quiz/q2/home_02.png",
+        imageUrl: "/quiz/q2/home_02.jpg",
       },
       {
         id: "home_03",
         label: "Sun-kissed & Relaxed",
-        imageUrl: "/quiz/q2/home_03.png",
+        imageUrl: "/quiz/q2/home_03.jpg",
       },
     ],
   },
@@ -130,17 +130,17 @@ export const QUESTIONS: Question[] = [
       {
         id: "light_01",
         label: "Bright & Airy",
-        imageUrl: "/quiz/q3/light-01.png",
+        imageUrl: "/quiz/q3/light-01.jpg",
       },
       {
         id: "light_02",
         label: "Balanced with Contrast",
-        imageUrl: "/quiz/q3/light-02.png",
+        imageUrl: "/quiz/q3/light-02.jpg",
       },
       {
         id: "light_03",
         label: "Moody & Dramatic",
-        imageUrl: "/quiz/q3/light-03.png",
+        imageUrl: "/quiz/q3/light-03.jpg",
       },
     ],
   },
@@ -157,17 +157,17 @@ export const QUESTIONS: Question[] = [
       {
         id: "vacation_01",
         label: "Paris city immersion",
-        imageUrl: "/quiz/q4/vacation-01.png",
+        imageUrl: "/quiz/q4/vacation-01.jpg",
       },
       {
         id: "vacation_02",
         label: "Provincial countryside retreat",
-        imageUrl: "/quiz/q4/vacation-02.png",
+        imageUrl: "/quiz/q4/vacation-02.jpg",
       },
       {
         id: "vacation_03",
         label: "Mediterranean seaside escape",
-        imageUrl: "/quiz/q4/vacation-03.png",
+        imageUrl: "/quiz/q4/vacation-03.jpg",
       },
     ],
   },
@@ -184,17 +184,17 @@ export const QUESTIONS: Question[] = [
       {
         id: "material-01",
         label: "Polished & Modern",
-        imageUrl: "/quiz/q5/material-01.png",
+        imageUrl: "/quiz/q5/material-01.jpg",
       },
       {
         id: "material-02",
         label: "Crisp & Natural",
-        imageUrl: "/quiz/q5/material-02.png",
+        imageUrl: "/quiz/q5/material-02.jpg",
       },
       {
         id: "material-03",
         label: "Textured & Vintage",
-        imageUrl: "/quiz/q5/material-03.png",
+        imageUrl: "/quiz/q5/material-03.jpg",
       },
     ],
   },
@@ -211,17 +211,17 @@ export const QUESTIONS: Question[] = [
       {
         id: "feel-01",
         label: "Minimal",
-        imageUrl: "/quiz/q6/feel-01.png",
+        imageUrl: "/quiz/q6/feel-01.jpg",
       },
       {
         id: "feel-02",
         label: "Curated",
-        imageUrl: "/quiz/q6/feel-02.png",
+        imageUrl: "/quiz/q6/feel-02.jpg",
       },
       {
         id: "feel-03",
         label: "Layered",
-        imageUrl: "/quiz/q6/feel-03.png",
+        imageUrl: "/quiz/q6/feel-03.jpg",
       },
     ],
   },
@@ -238,17 +238,17 @@ export const QUESTIONS: Question[] = [
       {
         id: "texture_01",
         label: "Elegant & Formal",
-        imageUrl: "/quiz/q7/texture_03.png",
+        imageUrl: "/quiz/q7/texture_03.jpg",
       },
       {
         id: "texture_02",
         label: "Organic & Unrefined",
-        imageUrl: "/quiz/q7/texture_02.png",
+        imageUrl: "/quiz/q7/texture_02.jpg",
       },
       {
         id: "texture_03",
         label: "Tactile & Eclectic",
-        imageUrl: "/quiz/q7/texture_01.png",
+        imageUrl: "/quiz/q7/texture_01.jpg",
       },
     ],
   },
@@ -265,22 +265,22 @@ export const QUESTIONS: Question[] = [
       {
         id: "mood-01",
         label: "Soft Neutrals & Warm Whites",
-        imageUrl: "/quiz/q8/mood-01.png",
+        imageUrl: "/quiz/q8/mood-01.jpg",
       },
       {
         id: "mood-02",
         label: "Neutral with High Contrast",
-        imageUrl: "/quiz/q8/mood-02.png",
+        imageUrl: "/quiz/q8/mood-02.jpg",
       },
       {
         id: "mood-03",
         label: "Deep Jewel Tones",
-        imageUrl: "/quiz/q8/mood-03.png",
+        imageUrl: "/quiz/q8/mood-03.jpg",
       },
       {
         id: "mood-04",
         label: "Dramatic & Moody",
-        imageUrl: "/quiz/q8/mood-04.png",
+        imageUrl: "/quiz/q8/mood-04.jpg",
       },
     ],
   },
