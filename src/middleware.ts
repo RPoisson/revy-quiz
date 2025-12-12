@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Ensure the cookie name matches the login route
+const COOKIE_NAME = process.env.PASSWORD_COOKIE_NAME ?? "revy_quiz_auth";
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -8,7 +11,7 @@ export function middleware(req: NextRequest) {
   const publicPaths = ["/login", "/api/login", "/favicon.ico"];
   const isPublic = publicPaths.some((path) => pathname.startsWith(path));
 
-  // Next.js internals and static assets
+  // Next.js internals and static assets should always pass through
   if (
     isPublic ||
     pathname.startsWith("/_next") ||
@@ -18,13 +21,15 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const accessCookie = req.cookies.get("revy_access");
+  // Read the same cookie the login route sets
+  const accessCookie = req.cookies.get(COOKIE_NAME);
 
+  // If logged in → allow access
   if (accessCookie?.value === "true") {
     return NextResponse.next();
   }
 
-  // Not authorized → send to login
+  // Otherwise redirect to login
   const loginUrl = new URL("/login", req.url);
   return NextResponse.redirect(loginUrl);
 }
