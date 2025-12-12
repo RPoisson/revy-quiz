@@ -1,5 +1,8 @@
 // src/app/quiz/page.tsx
+//updated for mobile on local
 "use client";
+
+
 
 import { useMemo, useState, useEffect } from "react";
 import { QUESTIONS, Question, Option } from "@/questions";
@@ -15,6 +18,8 @@ type QuizAnswers = Record<string, string[]>;
 
 
 export default function QuizPage() {
+
+
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>({});
   const [completed, setCompleted] = useState(false);
@@ -80,8 +85,11 @@ export default function QuizPage() {
     const { roomDesign, title, description } = resultText;
 
     return (
+
+    
   
   <main className="min-h-screen flex justify-center px-4 pt-6 pb-24 md:py-10">
+ 
     <div className="w-full max-w-xl flex flex-col gap-6">
 
 

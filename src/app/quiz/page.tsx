@@ -1,16 +1,28 @@
 // src/app/quiz/page.tsx
+//updated for mobile on local
+//UPdated for vercel
 "use client";
+
+
 
 import { useMemo, useState, useEffect } from "react";
 import { QUESTIONS, Question, Option } from "@/questions";
-import { scoreQuiz } from "@/app/scoring";
-import { generateResultText } from "@/app/resultText";
+import { scoreQuiz, Answers as ScoringAnswers } from "@/app/scoring";
+import {
+  generateResultText,
+  GeneratedResultText,
+} from "@/app/resultText";
 
-type Answers = Record<string, string[]>;
+type QuizAnswers = Record<string, string[]>;
+
+
+
 
 export default function QuizPage() {
+
+
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
+  const [answers, setAnswers] = useState<QuizAnswers>({});
   const [completed, setCompleted] = useState(false);
 
   const question = QUESTIONS[step];
@@ -18,10 +30,14 @@ export default function QuizPage() {
   const progress = ((step + 1) / total) * 100;
   const isLast = step === total - 1;
 
-  // Scroll to top on each step change
+ // 👇 Smooth scroll to top on each question change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }, [step]);
+
 
   function toggleOption(q: Question, optionId: string) {
     setAnswers((prev) => {
@@ -42,6 +58,7 @@ export default function QuizPage() {
     if (!isLast) {
       setStep((s) => s + 1);
     } else {
+      // Quiz complete
       console.log("Quiz complete:", answers);
       setCompleted(true);
     }
@@ -58,20 +75,35 @@ export default function QuizPage() {
   }, [answers, question.id]);
 
   if (completed) {
-    const styleResult = scoreQuiz(answers);
-    const resultText = generateResultText(styleResult, answers as any);
-    const { roomDesign, title, description } = resultText as any;
+    // Convert quiz answers into the shape scoring/resultText expect
+    const scoringAnswers = answers as ScoringAnswers;
+    const styleResult = scoreQuiz(scoringAnswers);
+    const resultText: GeneratedResultText = generateResultText(
+      styleResult,
+      scoringAnswers
+    );
+
+    const { roomDesign, title, description } = resultText;
 
     return (
-      <main className="flex-1 flex justify-center px-4 py-10">
-        <div className="w-full max-w-xl space-y-8">
+
+    
+  
+  <main className="min-h-screen flex justify-center px-4 pt-6 pb-24 md:py-10">
+ 
+    <div className="w-full max-w-xl flex flex-col gap-6">
+
+
           <p className="text-xs tracking-[0.2em] uppercase text-black/50">
             Studio Rêvy
           </p>
 
-          <h1 className="font-[var(--font-playfair)] text-3xl leading-tight">
-            Your bathroom style story
-          </h1>
+         <h1 className="font-[var(--font-playfair)] text-xl md:text-2xl leading-snug">
+  {question.title}
+</h1>
+
+
+
 
           {/* Room Design section */}
           <section className="space-y-2">
@@ -79,20 +111,22 @@ export default function QuizPage() {
               Room Design
             </h2>
             <div className="text-sm text-black/80 space-y-1">
-              {roomDesign?.primaryUserLabel && (
+              {roomDesign.primaryUserLabel && (
                 <div>{roomDesign.primaryUserLabel}</div>
               )}
-              {roomDesign?.vanityLabel && <div>{roomDesign.vanityLabel}</div>}
-              {roomDesign?.bathingLabel && <div>{roomDesign.bathingLabel}</div>}
+              {roomDesign.vanityLabel && <div>{roomDesign.vanityLabel}</div>}
+              {roomDesign.bathingLabel && <div>{roomDesign.bathingLabel}</div>}
             </div>
-          </section>
+          </section> 
 
           {/* Title section */}
           <section className="space-y-2">
             <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-black/50">
               Title
             </h2>
-            <p className="text-lg font-semibold text-black">{title}</p>
+            <p className="text-lg  text-black">
+              {title}
+            </p>
           </section>
 
           {/* Description section */}
@@ -104,14 +138,23 @@ export default function QuizPage() {
               {description}
             </p>
           </section>
+
+          {/* Optional debug of raw answers – remove later if you want */}
+          {/* <pre className="text-[10px] bg-white/70 border border-black/5 rounded-xl p-3 overflow-x-auto">
+            {JSON.stringify(answers, null, 2)}
+          </pre> */}
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 flex justify-center px-4 py-6 md:py-10">
-      <div className="w-full max-w-xl flex flex-col gap-6">
+  <main className="min-h-screen flex justify-center px-4 py-4 md:py-10">
+    <div className="w-full max-w-md md:max-w-xl flex flex-col gap-6">
+
+
+
+
         {/* Progress */}
         <header className="space-y-2">
           <div className="h-1 w-full bg-black/10 rounded-full overflow-hidden">
@@ -124,7 +167,7 @@ export default function QuizPage() {
             <span>
               Question {question.index} of {total}
             </span>
-            <span>Studio Rêvy</span>
+            <span>Studio RêvyTM</span>
           </div>
         </header>
 
@@ -134,7 +177,8 @@ export default function QuizPage() {
             {question.title}
           </h1>
           {question.subtitle && (
-            <p className="text-sm text-black/70">{question.subtitle}</p>
+           <p className="text-xs md:text-sm text-black/70">{question.subtitle}</p>
+
           )}
         </section>
 
@@ -147,27 +191,49 @@ export default function QuizPage() {
           />
         </section>
 
+
+
+
         {/* Nav */}
-        <footer className="mt-auto flex items-center justify-between pt-4">
-          <button
-            onClick={handleBack}
-            disabled={step === 0}
-            className="text-xs md:text-sm px-4 py-2 rounded-full border border-black/20 disabled:opacity-40 bg-transparent hover:bg-black/5 transition"
-          >
-            Back
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={!canGoNext}
-            className="text-xs md:text-sm px-6 py-2 rounded-full bg-black text-[#F8F5EE] disabled:opacity-40 hover:bg-black/90 transition"
-          >
-            {isLast ? "See my style" : "Next"}
-          </button>
-        </footer>
+        <footer className="mt-auto pt-4">
+  <div
+    className="
+      fixed inset-x-0 bottom-0 z-20 bg-[#F8F5EE]/95 border-t border-black/10 px-4 py-3
+      md:static md:bg-transparent md:border-t-0 md:px-0 md:py-0
+      md:flex md:items-center md:justify-between
+    "
+  >
+    <button
+      onClick={handleBack}
+      disabled={step === 0}
+      className="w-full md:w-auto text-xs md:text-sm px-4 py-2 rounded-full border border-black/20 disabled:opacity-40 bg-transparent hover:bg-black/5 transition"
+    >
+      Back
+    </button>
+    <button
+      onClick={handleNext}
+      disabled={!canGoNext}
+      className="mt-2 md:mt-0 w-full md:w-auto text-xs md:text-sm px-6 py-2 rounded-full bg-black text-[#F8F5EE] disabled:opacity-40 hover:bg-black/90 transition"
+    >
+      {isLast ? "See my style" : "Next"}
+    </button>
+  </div>
+</footer>
+
+
+
+
+
+
+
+
+
       </div>
     </main>
   );
 }
+
+
 
 function QuestionOptions({
   question,
@@ -183,55 +249,60 @@ function QuestionOptions({
   // Layout:
   // - Q1: dense grid (27 images)
   // - All others: stacked cards
-  const layoutClasses =
-    question.type === "multi-image" && isQ1
-      ? "grid grid-cols-2 gap-3 md:grid-cols-3 max-h-[70vh] overflow-y-auto pr-1"
-      : "flex flex-col gap-4";
+
+
+
+const layoutClasses =
+  question.type === "multi-image" && isQ1
+    ? "grid grid-cols-2 gap-2 md:gap-3 md:grid-cols-3 max-h-[70vh] overflow-y-auto pr-1"
+    : "flex flex-col gap-3 md:gap-4";
+
+
+
+
 
   return (
     <div className={layoutClasses}>
       {question.options.map((opt: Option) => {
         const isActive = selected.includes(opt.id);
         return (
-          <button
-            key={opt.id}
-            onClick={() => onSelect(question, opt.id)}
-            className={`relative overflow-hidden rounded-2xl bg-white shadow-sm text-left transition transform ${
-              isActive
-                ? "ring-2 ring-black scale-[0.99]"
-                : "hover:scale-[1.01] hover:shadow-md"
-            }`}
-          >
-            <div className="relative">
-              {opt.imageUrl && (
-                <img
-                  src={opt.imageUrl}
-                  alt={opt.label}
-                  className="w-full aspect-[2/3] object-cover"
-                />
-              )}
+        <button
+  key={opt.id}
+  onClick={() => onSelect(question, opt.id)}
+  className={`relative overflow-hidden rounded-2xl bg-white shadow-sm text-left transition transform ${
+    isActive
+      ? "ring-2 ring-black scale-[0.99]"
+      : "hover:scale-[1.01] hover:shadow-md"
+  }`}
+>
+  <div className="p-3 pb-0">
+  <p className="text-sm md:text-base font-[var(--font-playfair)] text-black">
+    {opt.label}
+  </p>
+  {opt.subtitle && (
+    <p className="mt-1 text-xs md:text-sm text-black/60">{opt.subtitle}</p>
+  )}
+</div>
 
-              {/* Label bar at the TOP of the image */}
-              <div className="absolute top-0 left-0 right-0 bg-black/50 px-3 py-2">
-                <p className="text-xs md:text-sm font-medium text-white">
-                  TOP LABEL {opt.label}
-                </p>
-                {opt.subtitle && (
-                  <p className="mt-0.5 text-[10px] md:text-xs text-white/80">
-                    {opt.subtitle}
-                  </p>
-                )}
-              </div>
-            </div>
 
-            {question.allowMultiple && (
-              <span className="absolute top-2 right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-[10px] text-[#F8F5EE]">
-                ✓
-              </span>
-            )}
-          </button>
+  {/* Image with matching rounded top + bottom */}
+{opt.imageUrl && (
+  <img
+    src={opt.imageUrl}
+    alt={opt.label}
+    className="w-full aspect-[2/3] object-cover rounded-2xl"
+  />
+)}
+
+  {question.allowMultiple && question.id !== "spaces_appeal" && (
+  <span className="absolute top-2 right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-[10px] text-[#F8F5EE]">
+    ✓
+  </span>
+)}
+</button>
         );
       })}
     </div>
   );
 }
+
