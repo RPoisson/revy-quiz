@@ -1,18 +1,14 @@
 // src/app/login/page.tsx
 "use client";
 
-import { useState } from "react";
-
-// For now we hard-code the password on the client for simplicity.
-// If you want to change it, update this string and redeploy.
-const EXPECTED_PASSWORD =
-  process.env.NEXT_PUBLIC_QUIZ_PASSWORD;
-if (!EXPECTED_PASSWORD) {
-  throw new Error("NEXT_PUBLIC_QUIZ_PASSWORD is not set");
-}
-
+import { useMemo, useState } from "react";
 
 export default function LoginPage() {
+  const EXPECTED_PASSWORD = useMemo(
+    () => process.env.NEXT_PUBLIC_QUIZ_PASSWORD ?? "",
+    []
+  );
+
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +19,12 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // Simple client-side check only
+      if (!EXPECTED_PASSWORD) {
+        setError("Password is not configured on this deployment.");
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!password) {
         setError("Password is required");
         setIsSubmitting(false);
@@ -36,17 +37,33 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Mark this tab/session as "authed"
-      if (typeof window !== "undefined") {
-        window.sessionStorage.setItem("revy_quiz_authed", "1");
-        // Full-page nav so everything is clean
-        window.location.href = "/quiz";
-      }
+      window.sessionStorage.setItem("revy_quiz_authed", "1");
+      window.location.href = "/quiz";
     } catch (err) {
       console.error(err);
       setError("Something went wrong. Please try again.");
       setIsSubmitting(false);
     }
+  }
+
+  // If env is missing, show a clear message (no hard crash)
+  if (!EXPECTED_PASSWORD) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-sm space-y-3 text-center">
+          <p className="text-xs tracking-[0.2em] uppercase text-black/50">
+            Studio Rêvy™
+          </p>
+          <h1 className="font-[var(--font-playfair)] text-xl">
+            Password not configured
+          </h1>
+          <p className="text-xs text-black/60">
+            Set <span className="font-mono">NEXT_PUBLIC_QUIZ_PASSWORD</span> in
+            Vercel Environment Variables (Production).
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -95,8 +112,8 @@ export default function LoginPage() {
           </button>
 
           <p className="text-[10px] text-black/40 text-center">
-            If you are in private browsing and the login doesn&apos;t stick,
-            close the tab and reopen the link.
+            In private browsing, this login is per-tab and may reset if the tab
+            is closed.
           </p>
         </form>
       </div>
