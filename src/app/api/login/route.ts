@@ -1,4 +1,3 @@
-// src/app/api/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 const PASSWORD = process.env.QUIZ_PASSWORD;
@@ -12,7 +11,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Because your <form> uses method="POST" and name="code"
   const formData = await req.formData();
   const enteredCode = formData.get("code");
 
@@ -23,21 +21,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Redirect to the quiz page after successful login
   const res = NextResponse.redirect(new URL("/quiz", req.url));
 
-  // Set the auth cookie
   res.cookies.set(COOKIE_NAME, "true", {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return res;
 }
 
-// Optional: explicitly block other methods
 export function GET() {
-  return NextResponse.json({ error: "Method Not Allowed" }, { status: 405 });
+  return NextResponse.json({
+    ok: true,
+    hasPassword: !!process.env.QUIZ_PASSWORD,
+  });
 }
