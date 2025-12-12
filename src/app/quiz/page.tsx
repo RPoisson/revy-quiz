@@ -123,8 +123,8 @@ export default function QuizPage() {
           </p>
 
           <h1 className="font-[var(--font-playfair)] text-xl md:text-2xl leading-snug">
-            {question.title}
-          </h1>
+  What&apos;s your Style?
+</h1>
 
           {/* Room Design section */}
           <section className="space-y-2">
