@@ -1,3 +1,4 @@
+ 
 // src/app/quiz/page.tsx
 //updated for mobile on local
 "use client";
