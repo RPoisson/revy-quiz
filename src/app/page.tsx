@@ -98,9 +98,10 @@ export default function QuizPage() {
             Studio Rêvy
           </p>
 
-         <h1 className="font-[var(--font-playfair)] text-xl md:text-2xl leading-snug">
-  {question.title}
+      <h1 className="font-[var(--font-playfair)] text-xl md:text-2xl leading-snug">
+  What&apos;s your Style?
 </h1>
+
 
 
 
