@@ -16,6 +16,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Rêvy Style Quiz",
   description: "Discover your French-California interior StyleDNA.",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -24,13 +25,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.variable} ${playfair.variable} bg-[#F8F5EE] text-[#111111]`}
-      >
-        <div className="min-h-screen flex flex-col">
-          {children}
-        </div>
+    <html
+      lang="en"
+      style={{ colorScheme: "light" }}
+      className={`${inter.variable} ${playfair.variable}`}
+    >
+      <body>
+        <div className="min-h-screen flex flex-col">{children}</div>
       </body>
     </html>
   );

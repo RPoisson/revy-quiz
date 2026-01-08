@@ -2,71 +2,87 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
 import { QUESTIONS, Question, Option } from "@/questions";
 import { scoreQuiz, Answers as ScoringAnswers } from "@/app/scoring";
-import {
-  generateResultText,
-  GeneratedResultText,
-} from "@/app/resultText";
+import { generateResultText, GeneratedResultText } from "@/app/resultText";
 
 type QuizAnswers = Record<string, string[]>;
 
-export default function QuizPage() {
-  // 🔐 Simple client-side auth gate
-  const [checkedAuth, setCheckedAuth] = useState(false);
+function pruneInvalidAnswers(allAnswers: QuizAnswers): QuizAnswers {
+  let changed = false;
+  const next: QuizAnswers = { ...allAnswers };
 
+  for (const q of QUESTIONS) {
+    const current = allAnswers[q.id];
+    if (!current || current.length === 0) continue;
+
+    // If the entire question is hidden, clear its answers.
+    if (q.showIf && !q.showIf(allAnswers)) {
+      next[q.id] = [];
+      changed = true;
+      continue;
+    }
+
+    const visibleOptionIds = new Set(
+      q.options
+        .filter((opt) => (opt.showIf ? opt.showIf(allAnswers) : true))
+        .map((opt) => opt.id)
+    );
+
+    const pruned = current.filter((id) => visibleOptionIds.has(id));
+    if (pruned.length !== current.length) {
+      next[q.id] = pruned;
+      changed = true;
+    }
+  }
+
+  return changed ? next : allAnswers;
+}
+
+export default function QuizPage() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>({});
   const [completed, setCompleted] = useState(false);
 
-  // Check sessionStorage flag set by /login
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const authed = window.sessionStorage.getItem("revy_quiz_authed");
-    if (!authed) {
-      window.location.href = "/login";
-      return;
-    }
-    setCheckedAuth(true);
-  }, []);
-
-  // Smooth scroll to top on each question change (after auth)
-  useEffect(() => {
-    if (!checkedAuth) return;
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }, [step, checkedAuth]);
-
   const total = QUESTIONS.length;
-  const question = QUESTIONS[step] ?? null;
-  const progress = question ? ((step + 1) / total) * 100 : 0;
+  const question = QUESTIONS[step];
+
+  // Defensive guard
+  const safeProgress = total > 0 ? ((step + 1) / total) * 100 : 0;
   const isLast = step === total - 1;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
 
   function toggleOption(q: Question, optionId: string) {
     setAnswers((prev) => {
       const current = prev[q.id] ?? [];
+      let updated: QuizAnswers;
+
       if (q.allowMultiple) {
         const exists = current.includes(optionId);
-        const next = exists
+        const nextSelected = exists
           ? current.filter((id) => id !== optionId)
           : [...current, optionId];
-        return { ...prev, [q.id]: next };
+        updated = { ...prev, [q.id]: nextSelected };
       } else {
-        return { ...prev, [q.id]: [optionId] };
+        updated = { ...prev, [q.id]: [optionId] };
       }
+
+      if (q.id === "home_exterior_style") {
+        return pruneInvalidAnswers(updated);
+      }
+
+      return updated;
     });
   }
 
   function handleNext() {
     if (!question) return;
-
-    if (!isLast) {
-      setStep((s) => s + 1);
-    } else {
-      setCompleted(true);
-    }
+    if (!isLast) setStep((s) => s + 1);
+    else setCompleted(true);
   }
 
   function handleBack() {
@@ -76,17 +92,10 @@ export default function QuizPage() {
   const canGoNext = useMemo(() => {
     if (!question) return false;
     const current = answers[question.id] ?? [];
-    // If you want to require an answer, change to: return current.length > 0;
-    return true || current.length > 0;
+    return question.required ? current.length > 0 : true;
   }, [answers, question]);
 
-  // While we haven't confirmed auth, render nothing
-  if (!checkedAuth) {
-    return null;
-  }
-
-  // Defensive guard: if something goes wrong with indexing
-  if (!completed && !question) {
+  if (!question && !completed) {
     return (
       <main className="min-h-screen flex justify-center items-center px-4 py-10">
         <div className="w-full max-w-md text-center space-y-3">
@@ -104,8 +113,7 @@ export default function QuizPage() {
     );
   }
 
-  if (completed && question) {
-    // Convert quiz answers into the shape scoring/resultText expect
+  if (completed) {
     const scoringAnswers = answers as ScoringAnswers;
     const styleResult = scoreQuiz(scoringAnswers);
     const resultText: GeneratedResultText = generateResultText(
@@ -119,14 +127,13 @@ export default function QuizPage() {
       <main className="min-h-screen flex justify-center px-4 pt-6 pb-24 md:py-10">
         <div className="w-full max-w-xl flex flex-col gap-6">
           <p className="text-xs tracking-[0.2em] uppercase text-black/50">
-            Studio Rêvy™
+            Studio Rêvy
           </p>
 
           <h1 className="font-[var(--font-playfair)] text-xl md:text-2xl leading-snug">
-  What&apos;s your Style?
-</h1>
+            What&apos;s your Style?
+          </h1>
 
-          {/* Room Design section */}
           <section className="space-y-2">
             <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-black/50">
               Room Design
@@ -140,7 +147,6 @@ export default function QuizPage() {
             </div>
           </section>
 
-          {/* Title section */}
           <section className="space-y-2">
             <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-black/50">
               Title
@@ -148,7 +154,6 @@ export default function QuizPage() {
             <p className="text-lg text-black">{title}</p>
           </section>
 
-          {/* Description section */}
           <section className="space-y-2">
             <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-black/50">
               Description
@@ -162,27 +167,24 @@ export default function QuizPage() {
     );
   }
 
-  // Main quiz flow
   return (
     <main className="min-h-screen flex justify-center px-4 py-4 md:py-10">
       <div className="w-full max-w-md md:max-w-xl flex flex-col gap-6">
-        {/* Progress */}
         <header className="space-y-2">
           <div className="h-1 w-full bg-black/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-black transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${safeProgress}%` }}
             />
           </div>
           <div className="flex items-center justify-between text-[11px] text-black/60">
             <span>
-              Question {question!.index} of {total}
+              Question {step + 1} of {total}
             </span>
-            <span>Studio Rêvy™</span>
+            <span>Studio RêvyTM</span>
           </div>
         </header>
 
-        {/* Question text */}
         <section className="space-y-2">
           <h1 className="font-[var(--font-playfair)] text-2xl leading-snug">
             {question!.title}
@@ -194,16 +196,15 @@ export default function QuizPage() {
           )}
         </section>
 
-        {/* Options */}
         <section className="mt-2">
           <QuestionOptions
             question={question!}
             selected={answers[question!.id] ?? []}
             onSelect={toggleOption}
+            answers={answers}
           />
         </section>
 
-        {/* Nav */}
         <footer className="mt-auto pt-4">
           <div
             className="
@@ -232,64 +233,95 @@ export default function QuizPage() {
     </main>
   );
 }
-
 function QuestionOptions({
   question,
   selected,
   onSelect,
+  answers,
 }: {
   question: Question;
   selected: string[];
   onSelect: (q: Question, optionId: string) => void;
+  answers: QuizAnswers;
 }) {
-  const isQ1 = question.id === "spaces_appeal";
+  const isExterior = question.id === "home_exterior_style";
 
-  // Layout:
-  // - Q1: dense grid (27 images)
-  // - All others: stacked cards
-  const layoutClasses =
-    question.type === "multi-image" && isQ1
-      ? "grid grid-cols-2 gap-2 md:gap-3 md:grid-cols-3 max-h-[70vh] overflow-y-auto pr-1"
+  const visibleOptions = useMemo(() => {
+    return question.options.filter((opt) =>
+      opt.showIf ? opt.showIf(answers) : true
+    );
+  }, [question.options, answers]);
+
+  // If a question has at least one image, force a consistent tile grid (except exterior uses its own grid).
+  const hasImages = visibleOptions.some((opt) => !!opt.imageUrl);
+  const useTileGrid = hasImages && !isExterior;
+
+  /**
+   * Layout:
+   * - Exterior: small landscape tiles, 3-up
+   * - All other image questions: consistent portrait tiles, 2-up mobile / 3-up desktop
+   * - Text-only questions: stack (fallback)
+   */
+  const layoutClasses = isExterior
+    ? "grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3"
+    : useTileGrid
+      ? "grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3"
       : "flex flex-col gap-3 md:gap-4";
 
   return (
     <div className={layoutClasses}>
-      {question.options.map((opt: Option) => {
+      {visibleOptions.map((opt: Option) => {
         const isActive = selected.includes(opt.id);
+
+        // Aspect ratios:
+        // - Exterior images are 1536x1024 => 3:2
+        // - All other image questions: consistent portrait tiles (2:3)
+        const aspectClass = isExterior ? "aspect-[3/2]" : opt.imageUrl ? "aspect-[2/3]" : "";
+
         return (
           <button
             key={opt.id}
             onClick={() => onSelect(question, opt.id)}
-            className={`relative overflow-hidden rounded-2xl bg-white shadow-sm text-left transition transform appearance-none focus:outline-none ${
-              isActive
-                ? "ring-2 ring-black scale-[0.99]"
-                : "hover:scale-[1.01] hover:shadow-md"
+            className={`relative overflow-hidden rounded-xl bg-white shadow-sm text-left transition ${
+              isActive ? "ring-2 ring-black" : "hover:shadow-md"
             }`}
           >
-            <div className="p-3 pb-0">
-              <p className="text-sm md:text-base font-[var(--font-playfair)] text-black">
+            {opt.imageUrl && (
+              <div className={`relative w-full ${aspectClass}`}>
+                <Image
+                  src={opt.imageUrl}
+                  alt={opt.label}
+                  fill
+                  sizes={
+                    isExterior
+                      ? "(max-width: 640px) 48vw, (max-width: 1024px) 30vw, 22vw"
+                      : "(max-width: 768px) 50vw, 33vw"
+                  }
+                  className="object-cover"
+                  // Only prioritize the first question for perf.
+                  priority={isExterior}
+                />
+              </div>
+            )}
+
+            <div className={opt.imageUrl ? "p-2" : "p-3"}>
+              <p className="text-xs md:text-sm font-[var(--font-playfair)] text-black">
                 {opt.label}
               </p>
               {opt.subtitle && (
-                <p className="mt-1 text-xs md:text-sm text-black/60">
+                <p className="mt-0.5 text-[11px] md:text-xs text-black/60">
                   {opt.subtitle}
                 </p>
               )}
             </div>
 
-            {opt.imageUrl && (
-              <img
-                src={opt.imageUrl}
-                alt={opt.label}
-                className="w-full aspect-[2/3] object-cover rounded-2xl"
-              />
-            )}
-
-            {question.allowMultiple && question.id !== "spaces_appeal" && (
-              <span className="absolute top-2 right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-[10px] text-[#F8F5EE]">
-                ✓
-              </span>
-            )}
+            {question.allowMultiple &&
+              question.id !== "spaces_appeal" &&
+              isActive && (
+                <span className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/80 text-[9px] text-[#F8F5EE]">
+                  ✓
+                </span>
+              )}
           </button>
         );
       })}
