@@ -2,12 +2,17 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import Image from "next/image";
-import { QUESTIONS, Question, Option } from "@/questions";
+import { useRouter } from "next/navigation";
+import { QUESTIONS, Question } from "@/questions";
 import { scoreQuiz, Answers as ScoringAnswers } from "@/app/scoring";
 import { generateResultText, GeneratedResultText } from "@/app/resultText";
-
-type QuizAnswers = Record<string, string[]>;
+import QuestionOptions from "@/app/quiz/components/QuestionOptions";
+import {
+  getAnswers,
+  saveAnswers,
+  clearAnswers,
+  QuizAnswers,
+} from "@/app/quiz/lib/answersStore";
 
 function pruneInvalidAnswers(allAnswers: QuizAnswers): QuizAnswers {
   let changed = false;
@@ -17,20 +22,22 @@ function pruneInvalidAnswers(allAnswers: QuizAnswers): QuizAnswers {
     const current = allAnswers[q.id];
     if (!current || current.length === 0) continue;
 
-    // If the entire question is hidden, clear its answers.
+    // If the question itself is not visible, clear it
     if (q.showIf && !q.showIf(allAnswers)) {
       next[q.id] = [];
       changed = true;
       continue;
     }
 
-    const visibleOptionIds = new Set(
+    // Keep only options that are BOTH visible (showIf) and selectable (not disabledIf)
+    const selectableOptionIds = new Set(
       q.options
         .filter((opt) => (opt.showIf ? opt.showIf(allAnswers) : true))
+        .filter((opt) => (opt.disabledIf ? !opt.disabledIf(allAnswers) : true))
         .map((opt) => opt.id)
     );
 
-    const pruned = current.filter((id) => visibleOptionIds.has(id));
+    const pruned = current.filter((id) => selectableOptionIds.has(id));
     if (pruned.length !== current.length) {
       next[q.id] = pruned;
       changed = true;
@@ -41,19 +48,48 @@ function pruneInvalidAnswers(allAnswers: QuizAnswers): QuizAnswers {
 }
 
 export default function QuizPage() {
+  const router = useRouter();
+
+  // ✅ Hydration guard
+  const [mounted, setMounted] = useState(false);
+
   const [step, setStep] = useState(0);
+
+  // ✅ Don’t read localStorage on initial render
   const [answers, setAnswers] = useState<QuizAnswers>({});
+
   const [completed, setCompleted] = useState(false);
+
+  // Popover state for final CTA info (mobile + desktop tap)
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const total = QUESTIONS.length;
   const question = QUESTIONS[step];
 
-  // Defensive guard
   const safeProgress = total > 0 ? ((step + 1) / total) * 100 : 0;
   const isLast = step === total - 1;
 
+  // ✅ Load answers only after mount (client-only)
   useEffect(() => {
+    setMounted(true);
+    const stored = getAnswers();
+    setAnswers(stored);
+  }, []);
+
+  // ✅ Save only after mount (prevents server/client mismatch + avoids writing empty state)
+  useEffect(() => {
+    if (!mounted) return;
+    saveAnswers(answers);
+  }, [answers, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step, mounted]);
+
+  // Close info popover whenever you change steps (keeps deps stable)
+  useEffect(() => {
+    setInfoOpen(false);
   }, [step]);
 
   function toggleOption(q: Question, optionId: string) {
@@ -71,7 +107,8 @@ export default function QuizPage() {
         updated = { ...prev, [q.id]: [optionId] };
       }
 
-      if (q.id === "home_exterior_style") {
+      // Prune when upstream answers change that can invalidate downstream selections
+      if (q.id === "home_exterior_style" || q.id === "space_home") {
         return pruneInvalidAnswers(updated);
       }
 
@@ -82,11 +119,17 @@ export default function QuizPage() {
   function handleNext() {
     if (!question) return;
     if (!isLast) setStep((s) => s + 1);
-    else setCompleted(true);
+    else router.push("/brief");
   }
 
   function handleBack() {
     if (step > 0) setStep((s) => s - 1);
+    else router.push("/quiz/budget");
+  }
+
+  function handleExit() {
+    clearAnswers();
+    router.push("/");
   }
 
   const canGoNext = useMemo(() => {
@@ -94,6 +137,20 @@ export default function QuizPage() {
     const current = answers[question.id] ?? [];
     return question.required ? current.length > 0 : true;
   }, [answers, question]);
+
+  // ✅ Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <main className="min-h-screen flex justify-center items-center px-4 py-10">
+        <div className="w-full max-w-md text-center space-y-3">
+          <p className="text-xs tracking-[0.2em] uppercase text-black/50">
+            Studio Rêvy™
+          </p>
+          <p className="text-sm text-black/70">Loading your project…</p>
+        </div>
+      </main>
+    );
+  }
 
   if (!question && !completed) {
     return (
@@ -162,14 +219,42 @@ export default function QuizPage() {
               {description}
             </p>
           </section>
+
+          <button
+            onClick={() => {
+              clearAnswers();
+              router.push("/");
+            }}
+            className="mt-2 inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-[#F8F5EE] text-sm font-medium tracking-wide hover:bg-black/90 transition"
+          >
+            Start a new project
+          </button>
         </div>
       </main>
     );
   }
 
+  const tooltipText =
+    "Revy will consider your scope and taste to shape a thoughtful design direction, grounded in what matters most for your project.";
+
   return (
     <main className="min-h-screen flex justify-center px-4 py-4 md:py-10">
       <div className="w-full max-w-md md:max-w-xl flex flex-col gap-6">
+        {/* Page context + reassurance */}
+        <section className="space-y-2">
+          <p className="text-xs tracking-[0.2em] uppercase text-black/50">
+            Step 3 of 3 — Taste
+          </p>
+          <h1 className="font-[var(--font-playfair)] text-xl md:text-2xl leading-snug">
+            Now, let&apos;s explore your taste.
+          </h1>
+          <p className="text-xs md:text-sm text-black/70 leading-relaxed">
+            You&apos;ll choose images and spaces you&apos;re drawn to. Revy uses
+            your choices to identify your taste and create a design direction
+            that fits your scope and investment range.
+          </p>
+        </section>
+
         <header className="space-y-2">
           <div className="h-1 w-full bg-black/10 rounded-full overflow-hidden">
             <div
@@ -186,9 +271,9 @@ export default function QuizPage() {
         </header>
 
         <section className="space-y-2">
-          <h1 className="font-[var(--font-playfair)] text-2xl leading-snug">
+          <h2 className="font-[var(--font-playfair)] text-2xl leading-snug">
             {question!.title}
-          </h1>
+          </h2>
           {question!.subtitle && (
             <p className="text-xs md:text-sm text-black/70">
               {question!.subtitle}
@@ -210,121 +295,75 @@ export default function QuizPage() {
             className="
               fixed inset-x-0 bottom-0 z-20 bg-[#F8F5EE]/95 border-t border-black/10 px-4 py-3
               md:static md:bg-transparent md:border-t-0 md:px-0 md:py-0
-              md:flex md:items-center md:justify-between
             "
           >
-            <button
-              onClick={handleBack}
-              disabled={step === 0}
-              className="w-full md:w-auto text-xs md:text-sm px-4 py-2 rounded-full border border-black/20 disabled:opacity-40 bg-transparent hover:bg-black/5 transition"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={!canGoNext}
-              className="mt-2 md:mt-0 w-full md:w-auto text-xs md:text-sm px-6 py-2 rounded-full bg-black text-[#F8F5EE] disabled:opacity-40 hover:bg-black/90 transition"
-            >
-              {isLast ? "See my style" : "Next"}
-            </button>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex gap-3">
+                <button
+                  onClick={handleExit}
+                  className="w-full md:w-auto text-xs md:text-sm px-4 py-2 rounded-full border border-black/20 bg-transparent hover:bg-black/5 transition"
+                >
+                  Exit
+                </button>
+                <button
+                  onClick={handleBack}
+                  className="w-full md:w-auto text-xs md:text-sm px-4 py-2 rounded-full border border-black/20 bg-transparent hover:bg-black/5 transition"
+                >
+                  Back
+                </button>
+              </div>
+
+              {/* Right-side action area */}
+              <div className="flex items-center justify-end gap-2">
+                {isLast && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label="What happens next"
+                      aria-expanded={infoOpen}
+                      onClick={() => setInfoOpen((v) => !v)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/20 text-black/70 hover:bg-black/5 transition"
+                    >
+                      i
+                    </button>
+
+                    {infoOpen && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Close"
+                          onClick={() => setInfoOpen(false)}
+                          className="fixed inset-0 z-10 cursor-default"
+                          style={{ background: "transparent" }}
+                        />
+                        <div
+                          role="tooltip"
+                          className="
+                            absolute bottom-10 right-0 z-20
+                            w-[280px] md:w-[320px]
+                            rounded-xl border border-black/10 bg-[#F8F5EE] shadow-lg
+                            px-3 py-2 text-[11px] leading-relaxed text-black/70
+                          "
+                        >
+                          {tooltipText}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleNext}
+                  disabled={!canGoNext}
+                  className="w-full md:w-auto text-xs md:text-sm px-8 py-2 rounded-full bg-black text-[#F8F5EE] disabled:opacity-40 hover:bg-black/90 transition"
+                >
+                  {isLast ? "Let’s design your project" : "Next"}
+                </button>
+              </div>
+            </div>
           </div>
         </footer>
       </div>
     </main>
-  );
-}
-function QuestionOptions({
-  question,
-  selected,
-  onSelect,
-  answers,
-}: {
-  question: Question;
-  selected: string[];
-  onSelect: (q: Question, optionId: string) => void;
-  answers: QuizAnswers;
-}) {
-  const isExterior = question.id === "home_exterior_style";
-
-  const visibleOptions = useMemo(() => {
-    return question.options.filter((opt) =>
-      opt.showIf ? opt.showIf(answers) : true
-    );
-  }, [question.options, answers]);
-
-  // If a question has at least one image, force a consistent tile grid (except exterior uses its own grid).
-  const hasImages = visibleOptions.some((opt) => !!opt.imageUrl);
-  const useTileGrid = hasImages && !isExterior;
-
-  /**
-   * Layout:
-   * - Exterior: small landscape tiles, 3-up
-   * - All other image questions: consistent portrait tiles, 2-up mobile / 3-up desktop
-   * - Text-only questions: stack (fallback)
-   */
-  const layoutClasses = isExterior
-    ? "grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3"
-    : useTileGrid
-      ? "grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3"
-      : "flex flex-col gap-3 md:gap-4";
-
-  return (
-    <div className={layoutClasses}>
-      {visibleOptions.map((opt: Option) => {
-        const isActive = selected.includes(opt.id);
-
-        // Aspect ratios:
-        // - Exterior images are 1536x1024 => 3:2
-        // - All other image questions: consistent portrait tiles (2:3)
-        const aspectClass = isExterior ? "aspect-[3/2]" : opt.imageUrl ? "aspect-[2/3]" : "";
-
-        return (
-          <button
-            key={opt.id}
-            onClick={() => onSelect(question, opt.id)}
-            className={`relative overflow-hidden rounded-xl bg-white shadow-sm text-left transition ${
-              isActive ? "ring-2 ring-black" : "hover:shadow-md"
-            }`}
-          >
-            {opt.imageUrl && (
-              <div className={`relative w-full ${aspectClass}`}>
-                <Image
-                  src={opt.imageUrl}
-                  alt={opt.label}
-                  fill
-                  sizes={
-                    isExterior
-                      ? "(max-width: 640px) 48vw, (max-width: 1024px) 30vw, 22vw"
-                      : "(max-width: 768px) 50vw, 33vw"
-                  }
-                  className="object-cover"
-                  // Only prioritize the first question for perf.
-                  priority={isExterior}
-                />
-              </div>
-            )}
-
-            <div className={opt.imageUrl ? "p-2" : "p-3"}>
-              <p className="text-xs md:text-sm font-[var(--font-playfair)] text-black">
-                {opt.label}
-              </p>
-              {opt.subtitle && (
-                <p className="mt-0.5 text-[11px] md:text-xs text-black/60">
-                  {opt.subtitle}
-                </p>
-              )}
-            </div>
-
-            {question.allowMultiple &&
-              question.id !== "spaces_appeal" &&
-              isActive && (
-                <span className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/80 text-[9px] text-[#F8F5EE]">
-                  ✓
-                </span>
-              )}
-          </button>
-        );
-      })}
-    </div>
   );
 }

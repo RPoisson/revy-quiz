@@ -27,3 +27,57 @@ body {
      If you want a fallback, use the Inter variable: */
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
+@media print {
+  /* Page setup */
+  @page {
+    margin: 0.75in;
+  }
+
+  html, body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide anything interactive / not meant for paper */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Prevent “cards” from splitting across pages */
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Prevent section headings from being stranded at the bottom */
+  h1, h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Details/summary printing: avoid weird indentation + keep together */
+  details {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Reduce excessive spacing for print */
+  .print-tight {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure max width for print */
+  .print-full {
+    max-width: none !important;
+    width: 100% !important;
+  }
+}
